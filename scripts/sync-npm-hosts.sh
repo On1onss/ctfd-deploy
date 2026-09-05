@@ -73,10 +73,12 @@ ensure_wildcard_cert() {
   fi
 
   echo "requesting LetsEncrypt wildcard $wildcard via $DNS_PROVIDER ..."
-  local payload resp
+  local payload resp creds
+  # Разворачиваем литерал \n из .env в реальные переносы строк
+  creds="$(printf '%b' "${DNS_PROVIDER_CREDENTIALS//\\\\n/\\n}")"
   payload="$(jq -n \
     --arg p "$DNS_PROVIDER" \
-    --arg c "$DNS_PROVIDER_CREDENTIALS" \
+    --arg c "$creds" \
     '{provider:"letsencrypt", domain_names:["x"], meta:{dns_challenge:true, dns_provider:$p, dns_provider_credentials:$c}}')"
   payload="$(echo "$payload" | jq --arg w "$wildcard" '.domain_names = [$w]')"
 

@@ -158,6 +158,12 @@ DNS_PROVIDER=duckdns
 DNS_PROVIDER_CREDENTIALS="dns_duckdns_token=your-token"
 ```
 
+Многострочные credentials (regru, cloudflare, azure и др.) вводятся одной строкой через литерал `\n`:
+```bash
+DNS_PROVIDER=regru
+DNS_PROVIDER_CREDENTIALS="dns_username=user\ndns_password=pass"
+```
+
 Требования для LE: домен должен резолвиться на этот сервер, провайдер DNS должен поддерживать DNS-challenge, а `NPM_EMAIL` должен быть реальным валидным email (не `@ctf.local` — ACME отклоняет такие домены). Полный список провайдеров и примеры credentials — в `.env.example`.
 
 Если `DNS_PROVIDER`/`DNS_PROVIDER_CREDENTIALS` не заданы при https — хосты создадутся без SSL, сертификат можно добавить вручную в NPM (:81).

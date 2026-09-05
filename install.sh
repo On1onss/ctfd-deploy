@@ -66,7 +66,7 @@ if [ "$EXTERNAL_SCHEME" = "https" ]; then
   DNS_PROVIDER="${DNS_PROVIDER:-cloudflare}"
   DNS_PROVIDER="$(echo "$DNS_PROVIDER" | tr '[:upper:]' '[:lower:]')"
   if [ -t 0 ]; then
-    read -r -p "DNS provider credentials (одной строкой, напр. dns_cloudflare_api_token=...): " DNS_PROVIDER_CREDENTIALS || true
+    read -r -p "DNS provider credentials (одной строкой; для нескольких полей используй \n, напр. dns_username=u\ndns_password=p): " DNS_PROVIDER_CREDENTIALS || true
   fi
   if [ -z "$DNS_PROVIDER_CREDENTIALS" ]; then
     echo "error: для https нужны DNS_PROVIDER_CREDENTIALS (или задай env-переменную)" >&2
