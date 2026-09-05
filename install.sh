@@ -16,7 +16,6 @@ fi
 
 # --- Clone repos (если ещё нет) ---
 [ -d CTFd ] || git clone https://github.com/CTFd/CTFd.git
-#[ -d CTFd ] || git clone https://github.com/Michael-of-corse/CTFd.git
 
 # --- Спрашиваем BASE_DOMAIN (по умолчанию localhost) ---
 # Приоритет: аргумент скрипта > переменная окружения > промпт > localhost
