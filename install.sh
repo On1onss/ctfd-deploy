@@ -52,40 +52,74 @@ esac
 echo "Using EXTERNAL_SCHEME=${EXTERNAL_SCHEME}"
 
 if [ "$EXTERNAL_SCHEME" = "https" ]; then
-  # Список провайдеров из NPM (key: Name)
-  echo
-  echo "Доступные DNS-провайдеры (для wildcard-сертификата *.${BASE_DOMAIN}):"
-  echo "  cloudflare: Cloudflare, duckdns: DuckDNS, digitalocean: DigitalOcean,"
-  echo "  cloudns: ClouDNS, dnspod: DNSPod, route53: Route 53 (Amazon),"
-  echo "  godaddy: GoDaddy, namecheap: Namecheap, ovh: OVH, hetzner: Hetzner,"
-  echo "  vultr: Vultr, linode: Linode, gandi: Gandi Live DNS, porkbun: Porkbun,"
-  echo "  ... полный список см. в .env.example"
-  if [ -t 0 ]; then
-    read -r -p "DNS provider [cloudflare]: " DNS_PROVIDER || true
-  fi
-  DNS_PROVIDER="${DNS_PROVIDER:-cloudflare}"
-  DNS_PROVIDER="$(echo "$DNS_PROVIDER" | tr '[:upper:]' '[:lower:]')"
-  if [ -t 0 ]; then
-    read -r -p "DNS provider credentials (одной строкой; для нескольких полей используй \n, напр. dns_username=u\ndns_password=p): " DNS_PROVIDER_CREDENTIALS || true
-  fi
-  if [ -z "$DNS_PROVIDER_CREDENTIALS" ]; then
-    echo "error: для https нужны DNS_PROVIDER_CREDENTIALS (или задай env-переменную)" >&2
-    exit 1
-  fi
-  # Для выпуска сертификата LE нужен валидный email (NPM использует email админа)
-  if [ -z "${NPM_EMAIL:-}" ]; then
+  # Проверяем, есть ли свои сертификаты локально (certs/ или явные пути)
+  USE_CUSTOM_CERT=""
+  if [ -n "${CERT_FILE:-}" ] && [ -n "${CERT_KEY_FILE:-}" ]; then
+    USE_CUSTOM_CERT=1
+  elif [ -f certs/fullchain.pem ] && [ -f certs/privkey.pem ]; then
+    echo
+    echo "  Найдены локальные сертификаты в ./certs:"
+    echo "    fullchain.pem, privkey.pem"
     if [ -t 0 ]; then
-      read -r -p "Email для Let's Encrypt (валидный, для ACME): " NPM_EMAIL || true
+      read -r -p "Использовать свои сертификаты? [Y/n]: " USE_CUSTOM_CERT || true
     fi
-    if [ -z "$NPM_EMAIL" ]; then
-      echo "error: для https нужен валидный email для Let's Encrypt (NPM_EMAIL)" >&2
+    USE_CUSTOM_CERT="$(echo "${USE_CUSTOM_CERT:-y}" | tr '[:upper:]' '[:lower:]')"
+    if [ "$USE_CUSTOM_CERT" = "y" ] || [ "$USE_CUSTOM_CERT" = "yes" ]; then
+      USE_CUSTOM_CERT=1
+    else
+      USE_CUSTOM_CERT=""
+    fi
+  fi
+
+  if [ -n "$USE_CUSTOM_CERT" ]; then
+    CERT_FILE="${CERT_FILE:-certs/fullchain.pem}"
+    CERT_KEY_FILE="${CERT_KEY_FILE:-certs/privkey.pem}"
+    CERT_CHAIN_FILE="${CERT_CHAIN_FILE:-certs/chain.pem}"
+    [ -f "$CERT_FILE" ] || { echo "error: $CERT_FILE не найден" >&2; exit 1; }
+    [ -f "$CERT_KEY_FILE" ] || { echo "error: $CERT_KEY_FILE не найден" >&2; exit 1; }
+    [ -f "$CERT_CHAIN_FILE" ] || CERT_CHAIN_FILE=""
+    echo
+    echo "  Используются свои сертификаты:"
+    echo "    cert : $CERT_FILE"
+    echo "    key  : $CERT_KEY_FILE"
+    [ -n "$CERT_CHAIN_FILE" ] && echo "    chain: $CERT_CHAIN_FILE"
+    echo
+  else
+    # Список провайдеров из NPM (key: Name)
+    echo
+    echo "Доступные DNS-провайдеры (для wildcard-сертификата *.${BASE_DOMAIN}):"
+    echo "  cloudflare: Cloudflare, duckdns: DuckDNS, digitalocean: DigitalOcean,"
+    echo "  cloudns: ClouDNS, dnspod: DNSPod, route53: Route 53 (Amazon),"
+    echo "  godaddy: GoDaddy, namecheap: Namecheap, ovh: OVH, hetzner: Hetzner,"
+    echo "  vultr: Vultr, linode: Linode, gandi: Gandi Live DNS, porkbun: Porkbun,"
+    echo "  ... полный список см. в .env.example"
+    if [ -t 0 ]; then
+      read -r -p "DNS provider [cloudflare]: " DNS_PROVIDER || true
+    fi
+    DNS_PROVIDER="${DNS_PROVIDER:-cloudflare}"
+    DNS_PROVIDER="$(echo "$DNS_PROVIDER" | tr '[:upper:]' '[:lower:]')"
+    if [ -t 0 ]; then
+      read -r -p "DNS provider credentials (одной строкой; для нескольких полей используй \n, напр. dns_username=u\ndns_password=p): " DNS_PROVIDER_CREDENTIALS || true
+    fi
+    if [ -z "$DNS_PROVIDER_CREDENTIALS" ]; then
+      echo "error: для https нужны DNS_PROVIDER_CREDENTIALS (или задай env-переменную)" >&2
       exit 1
     fi
+    # Для выпуска сертификата LE нужен валидный email (NPM использует email админа)
+    if [ -z "${NPM_EMAIL:-}" ]; then
+      if [ -t 0 ]; then
+        read -r -p "Email для Let's Encrypt (валидный, для ACME): " NPM_EMAIL || true
+      fi
+      if [ -z "$NPM_EMAIL" ]; then
+        echo "error: для https нужен валидный email для Let's Encrypt (NPM_EMAIL)" >&2
+        exit 1
+      fi
+    fi
+    echo
+    echo "  Wildcard-сертификат *.${BASE_DOMAIN} будет выпущен автоматически через"
+    echo "  Let's Encrypt (DNS challenge) после старта NPM (email: ${NPM_EMAIL})."
+    echo
   fi
-  echo
-  echo "  Wildcard-сертификат *.${BASE_DOMAIN} будет выпущен автоматически через"
-  echo "  Let's Encrypt (DNS challenge) после старта NPM (email: ${NPM_EMAIL})."
-  echo
 fi
 
 # --- Генерируем .env, если его нет ---
@@ -102,6 +136,10 @@ if [ ! -f .env ]; then
       -e "s|^[#[:space:]]*BASE_DOMAIN=.*|BASE_DOMAIN=${BASE_DOMAIN}|" \
       -e "s|DEFAULT_FORWARD_SCHEME=.*|DEFAULT_FORWARD_SCHEME=${FORWARD_SCHEME}|" \
       -e "s|^[#[:space:]]*EXTERNAL_SCHEME=.*|EXTERNAL_SCHEME=${EXTERNAL_SCHEME}|" \
+      -e "s|^[#[:space:]]*USE_CUSTOM_CERT=.*|USE_CUSTOM_CERT=${USE_CUSTOM_CERT:-}|" \
+      -e "s|^[#[:space:]]*CERT_FILE=.*|CERT_FILE=${CERT_FILE:-}|" \
+      -e "s|^[#[:space:]]*CERT_KEY_FILE=.*|CERT_KEY_FILE=${CERT_KEY_FILE:-}|" \
+      -e "s|^[#[:space:]]*CERT_CHAIN_FILE=.*|CERT_CHAIN_FILE=${CERT_CHAIN_FILE:-}|" \
       -e "s|^[#[:space:]]*DNS_PROVIDER=.*|DNS_PROVIDER=${DNS_PROVIDER:-}|" \
       -e "s|^[#[:space:]]*DNS_PROVIDER_CREDENTIALS=.*|DNS_PROVIDER_CREDENTIALS=${DNS_PROVIDER_CREDENTIALS:-}|" \
       .env.example > .env
@@ -137,6 +175,14 @@ else
   else
     echo "DNS_PROVIDER_CREDENTIALS=${DNS_PROVIDER_CREDENTIALS:-}" >> .env
   fi
+  for var in USE_CUSTOM_CERT CERT_FILE CERT_KEY_FILE CERT_CHAIN_FILE; do
+    val="$(eval echo "\${$var:-}")"
+    if grep -q "^$var=" .env; then
+      sed -i "s|^$var=.*|$var=${val}|" .env
+    else
+      echo "$var=${val}" >> .env
+    fi
+  done
   echo ".env already exists, updated BASE_DOMAIN=${BASE_DOMAIN}, DEFAULT_FORWARD_SCHEME=${FORWARD_SCHEME}, EXTERNAL_SCHEME=${EXTERNAL_SCHEME}, DNS_PROVIDER=${DNS_PROVIDER:-}"
 fi
 

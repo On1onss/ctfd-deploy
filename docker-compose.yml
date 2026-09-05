@@ -84,6 +84,7 @@ services:
     volumes:
       - ./scripts/sync-npm-hosts.sh:/app/sync-npm-hosts.sh:ro
       - ./tasks:/tasks:ro
+      - ./certs:/certs:ro
     environment:
       - NPM_URL=http://npm:81
       - NPM_EMAIL=${NPM_EMAIL}
@@ -94,6 +95,10 @@ services:
       - EXTERNAL_SCHEME=${EXTERNAL_SCHEME:-http}
       - DNS_PROVIDER=${DNS_PROVIDER:-}
       - DNS_PROVIDER_CREDENTIALS=${DNS_PROVIDER_CREDENTIALS:-}
+      - USE_CUSTOM_CERT=${USE_CUSTOM_CERT:-}
+      - CERT_FILE=${CERT_FILE:-certs/fullchain.pem}
+      - CERT_KEY_FILE=${CERT_KEY_FILE:-certs/privkey.pem}
+      - CERT_CHAIN_FILE=${CERT_CHAIN_FILE:-certs/chain.pem}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |

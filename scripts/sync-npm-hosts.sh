@@ -35,6 +35,10 @@ load_env "$ROOT_DIR/.env"
 : "${EXTERNAL_SCHEME:=http}"
 : "${DNS_PROVIDER:=}"
 : "${DNS_PROVIDER_CREDENTIALS:=}"
+: "${USE_CUSTOM_CERT:=}"
+: "${CERT_FILE:=}"
+: "${CERT_KEY_FILE:=}"
+: "${CERT_CHAIN_FILE:=}"
 
 API="$NPM_URL/api"
 
@@ -87,6 +91,46 @@ ensure_wildcard_cert() {
   echo "created   wildcard cert (cert #$WILDCARD_CERT_ID)"
 }
 
+# Загружает свои сертификаты в NPM (provider=other) и отдаёт certificate_id
+ensure_custom_cert() {
+  local certs existing_id
+  certs="$(curl -sf "$API/nginx/certificates" -H "$AUTH")" || return 1
+
+  # Ищем свой сертификат по nice_name "custom" (если уже загружали)
+  existing_id="$(echo "$certs" | jq -r '.[] | select(.provider=="other") | select(.nice_name=="custom") | .id' | head -n1)"
+
+  if [ -n "$existing_id" ]; then
+    echo "cert       custom уже есть (cert #$existing_id)"
+    WILDCARD_CERT_ID="$existing_id"
+    return 0
+  fi
+
+  if [ -z "$CERT_FILE" ] || [ -z "$CERT_KEY_FILE" ]; then
+    echo "error: USE_CUSTOM_CERT выбран, но CERT_FILE/CERT_KEY_FILE не заданы" >&2
+    return 1
+  fi
+  [ -f "$CERT_FILE" ] || { echo "error: $CERT_FILE не найден" >&2; return 1; }
+  [ -f "$CERT_KEY_FILE" ] || { echo "error: $CERT_KEY_FILE не найден" >&2; return 1; }
+
+  echo "uploading custom certificate ($CERT_FILE) ..."
+  local resp
+  resp="$(curl -sf -X POST "$API/nginx/certificates" -H "$AUTH" -H 'Content-Type: application/json' \
+    -d "$(jq -n '{provider:"other", nice_name:"custom"}')")" || return 1
+  local cert_id
+  cert_id="$(echo "$resp" | jq -r '.id')"
+
+  local form_args=(-F "certificate=@$CERT_FILE" -F "certificate_key=@$CERT_KEY_FILE")
+  if [ -n "$CERT_CHAIN_FILE" ] && [ -f "$CERT_CHAIN_FILE" ]; then
+    form_args+=(-F "intermediate_certificate=@$CERT_CHAIN_FILE")
+  fi
+
+  curl -sf -X POST "$API/nginx/certificates/$cert_id/upload" \
+    -H "$AUTH" "${form_args[@]}" >/dev/null || return 1
+
+  WILDCARD_CERT_ID="$cert_id"
+  echo "uploaded  custom cert (cert #$WILDCARD_CERT_ID)"
+}
+
 upsert_proxy_host() {
   local forward_scheme="$1" forward_host="$2" forward_port="$3"
   shift 3
@@ -130,10 +174,14 @@ upsert_proxy_host() {
 AUTH="Authorization: Bearer $(get_token)"
 HOSTS="$(curl -sf "$API/nginx/proxy-hosts" -H "$AUTH")"
 
-# При https — выпускаем/находим wildcard-сертификат *.BASE_DOMAIN
+# При https — сертификат для хостов
 WILDCARD_CERT_ID=""
 if [ "$EXTERNAL_SCHEME" = "https" ]; then
-  if ! ensure_wildcard_cert; then
+  if [ "$USE_CUSTOM_CERT" = "1" ]; then
+    if ! ensure_custom_cert; then
+      echo "error: не удалось загрузить свои сертификаты, хосты создаются без SSL" >&2
+    fi
+  elif ! ensure_wildcard_cert; then
     echo "error: не удалось обеспечить wildcard-сертификат, хосты создаются без SSL" >&2
   fi
 fi

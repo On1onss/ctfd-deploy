@@ -146,7 +146,15 @@ CTFd и все таски публикуются автоматически пр
 
 ### HTTPS и wildcard-сертификат
 
-Если `EXTERNAL_SCHEME=https`, `install.sh` спрашивает DNS-провайдера, его credentials и **валидный email** для Let's Encrypt (этот email станет `NPM_EMAIL` — NPM использует его как email админа при регистрации в ACME). При поднятии стека `npm-sync` автоматически:
+При `EXTERNAL_SCHEME=https` `install.sh` предлагает два варианта:
+
+**1. Свои сертификаты** (если есть `certs/fullchain.pem` + `certs/privkey.pem`):
+- install.sh спросит «Использовать свои сертификаты?»
+- файлы загружаются в NPM (`provider=other`), привязываются к хостам с `ssl_forced` + http2
+- опционально `certs/chain.pem` — промежуточный сертификат
+- можно указать явные пути через `CERT_FILE`/`CERT_KEY_FILE`/`CERT_CHAIN_FILE`
+
+**2. Let's Encrypt wildcard**: если своих нет (или ответ «нет»), install.sh спрашивает DNS-провайдера, его credentials и **валидный email** для Let's Encrypt (этот email станет `NPM_EMAIL` — NPM использует его как email админа при регистрации в ACME). При поднятии стека `npm-sync` автоматически:
 
 1. выпускает wildcard-сертификат `*.BASE_DOMAIN` через Let's Encrypt (DNS challenge — NPM сам ставит нужный плагин certbot);
 2. привязывает его к каждому прокси-хосту (CTFd и все таски) и включает `ssl_forced` + http2.
@@ -167,6 +175,14 @@ DNS_PROVIDER_CREDENTIALS="dns_username=user\ndns_password=pass"
 Требования для LE: домен должен резолвиться на этот сервер, провайдер DNS должен поддерживать DNS-challenge, а `NPM_EMAIL` должен быть реальным валидным email (не `@ctf.local` — ACME отклоняет такие домены). Полный список провайдеров и примеры credentials — в `.env.example`.
 
 Если `DNS_PROVIDER`/`DNS_PROVIDER_CREDENTIALS` не заданы при https — хосты создадутся без SSL, сертификат можно добавить вручную в NPM (:81).
+
+Структура каталога с сертификатами:
+```
+certs/
+├── fullchain.pem    # обязательный
+├── privkey.pem      # обязательный
+└── chain.pem        # опционально (промежуточный)
+```
 
 #### Переопределение через `tasks/<category>/<name>/npm.json`
 
@@ -208,6 +224,10 @@ DNS_PROVIDER_CREDENTIALS="dns_username=user\ndns_password=pass"
 | `EXTERNAL_SCHEME` | Внешняя схема для пользователей (`http` / `https`) | `http` |
 | `DNS_PROVIDER` | DNS-провайдер для wildcard-сертификата (при https) | пусто |
 | `DNS_PROVIDER_CREDENTIALS` | Credentials-файл провайдера (при https) | пусто |
+| `USE_CUSTOM_CERT` | Использовать свои сертификаты вместо LE (`1`) | пусто |
+| `CERT_FILE` | Путь к своему сертификату | `certs/fullchain.pem` |
+| `CERT_KEY_FILE` | Путь к ключу сертификата | `certs/privkey.pem` |
+| `CERT_CHAIN_FILE` | Путь к промежуточному сертификату | `certs/chain.pem` |
 | `CTFD_DOMAIN` | Домен CTFd | `ctf.<BASE_DOMAIN>` |
 | `CTFD_FORWARD_HOST` | Хост CTFd внутри сети | `ctfd` |
 | `CTFD_FORWARD_PORT` | Порт CTFd внутри сети | `8000` |
