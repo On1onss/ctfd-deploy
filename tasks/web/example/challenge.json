@@ -1,0 +1,11 @@
+{
+  "name": "Example Web",
+  "description": "Простая таска, которая отдаёт флаг по HTTP.",
+  "category": "web",
+  "value": 100,
+  "type": "standard",
+  "state": "visible",
+  "flag": "flag{example_task_flag}",
+  "connection_info": "http://example.localhost",
+  "tags": ["web", "intro"]
+}

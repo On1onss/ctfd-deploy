@@ -1,0 +1,35 @@
+.env
+CTFd
+nginx-proxy-manager
+npm
+data
+
+# Created by https://www.toptal.com/developers/gitignore/api/venv,dotenv,direnv,virtualenv
+# Edit at https://www.toptal.com/developers/gitignore?templates=venv,dotenv,direnv,virtualenv
+
+### direnv ###
+.direnv
+.envrc
+
+### dotenv ###
+.env
+
+### venv ###
+# Virtualenv
+# http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
+.Python
+[Bb]in
+[Ii]nclude
+[Ll]ib
+[Ll]ib64
+[Ll]ocal
+[Ss]cripts
+pyvenv.cfg
+.venv
+pip-selfcheck.json
+
+### VirtualEnv ###
+# Virtualenv
+# http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
+
+# End of https://www.toptal.com/developers/gitignore/api/venv,dotenv,direnv,virtualenv
