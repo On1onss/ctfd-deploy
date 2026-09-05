@@ -193,6 +193,27 @@ for catdir in "$ROOT_DIR"/tasks/*/; do
       api_post "/tags" "$(jq -n --argjson cid "$challenge_id" --arg v "$t" '{challenge_id:$cid, value:$v}')" >/dev/null
     done
 
+    # файлы: из challenge.json (поле "files") и/или из подпапки files/
+    upload_files=()
+    if [ -d "$dir/files" ]; then
+      for f in "$dir"/files/*; do
+        [ -f "$f" ] && upload_files+=("$f")
+      done
+    fi
+    mapfile -t json_files < <(jq -r '.files[]? // empty' "$dir/challenge.json")
+    for f in "${json_files[@]}"; do
+      [ -f "$dir/$f" ] && upload_files+=("$dir/$f")
+    done
+    for f in "${upload_files[@]}"; do
+      curl -sf -b "$JAR" -c "$JAR" -X POST \
+        -H "CSRF-Token: $CSRF" \
+        -F "file=@$f" \
+        -F "challenge_id=$challenge_id" \
+        -F "type=challenge" \
+        "$BASE_URL/api/v1/files" >/dev/null 2>&1
+      echo "  file      $(basename "$f") -> #$challenge_id"
+    done
+
     echo "created   $name ($ch_category, $value pts, id=$challenge_id)"
     created=$((created + 1))
   done
