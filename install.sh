@@ -95,15 +95,15 @@ if [ ! -f .env ]; then
   CTF_ADMIN_EMAIL="ctf-$(tr -dc 'a-z0-9' </dev/urandom | head -c 12 || true)@ctf.local"
   CTF_ADMIN_PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24 || true)"
 
-  sed -e "s|NPM_EMAIL=.*|NPM_EMAIL=${NPM_EMAIL}|" \
+  sed -e "s|^[#[:space:]]*NPM_EMAIL=.*|NPM_EMAIL=${NPM_EMAIL}|" \
       -e "s|NPM_PASSWORD=.*|NPM_PASSWORD=${NPM_PASSWORD}|" \
       -e "s|CTF_ADMIN_EMAIL=.*|CTF_ADMIN_EMAIL=${CTF_ADMIN_EMAIL}|" \
       -e "s|CTF_ADMIN_PASSWORD=.*|CTF_ADMIN_PASSWORD=${CTF_ADMIN_PASSWORD}|" \
-      -e "s|BASE_DOMAIN=.*|BASE_DOMAIN=${BASE_DOMAIN}|" \
+      -e "s|^[#[:space:]]*BASE_DOMAIN=.*|BASE_DOMAIN=${BASE_DOMAIN}|" \
       -e "s|DEFAULT_FORWARD_SCHEME=.*|DEFAULT_FORWARD_SCHEME=${FORWARD_SCHEME}|" \
-      -e "s|EXTERNAL_SCHEME=.*|EXTERNAL_SCHEME=${EXTERNAL_SCHEME}|" \
-      -e "s|DNS_PROVIDER=.*|DNS_PROVIDER=${DNS_PROVIDER:-}|" \
-      -e "s|DNS_PROVIDER_CREDENTIALS=.*|DNS_PROVIDER_CREDENTIALS=${DNS_PROVIDER_CREDENTIALS:-}|" \
+      -e "s|^[#[:space:]]*EXTERNAL_SCHEME=.*|EXTERNAL_SCHEME=${EXTERNAL_SCHEME}|" \
+      -e "s|^[#[:space:]]*DNS_PROVIDER=.*|DNS_PROVIDER=${DNS_PROVIDER:-}|" \
+      -e "s|^[#[:space:]]*DNS_PROVIDER_CREDENTIALS=.*|DNS_PROVIDER_CREDENTIALS=${DNS_PROVIDER_CREDENTIALS:-}|" \
       .env.example > .env
 
   echo
