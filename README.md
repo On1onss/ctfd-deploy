@@ -146,7 +146,7 @@ CTFd и все таски публикуются автоматически пр
 
 ### HTTPS и wildcard-сертификат
 
-Если `EXTERNAL_SCHEME=https`, `install.sh` спрашивает DNS-провайдера и его credentials (`DNS_PROVIDER`, `DNS_PROVIDER_CREDENTIALS`). При поднятии стека `npm-sync` автоматически:
+Если `EXTERNAL_SCHEME=https`, `install.sh` спрашивает DNS-провайдера, его credentials и **валидный email** для Let's Encrypt (этот email станет `NPM_EMAIL` — NPM использует его как email админа при регистрации в ACME). При поднятии стека `npm-sync` автоматически:
 
 1. выпускает wildcard-сертификат `*.BASE_DOMAIN` через Let's Encrypt (DNS challenge — NPM сам ставит нужный плагин certbot);
 2. привязывает его к каждому прокси-хосту (CTFd и все таски) и включает `ssl_forced` + http2.
@@ -158,7 +158,7 @@ DNS_PROVIDER=duckdns
 DNS_PROVIDER_CREDENTIALS="dns_duckdns_token=your-token"
 ```
 
-Требования для LE: домен должен резолвиться на этот сервер, провайдер DNS должен поддерживать DNS-challenge. Полный список провайдеров и примеры credentials — в `.env.example`.
+Требования для LE: домен должен резолвиться на этот сервер, провайдер DNS должен поддерживать DNS-challenge, а `NPM_EMAIL` должен быть реальным валидным email (не `@ctf.local` — ACME отклоняет такие домены). Полный список провайдеров и примеры credentials — в `.env.example`.
 
 Если `DNS_PROVIDER`/`DNS_PROVIDER_CREDENTIALS` не заданы при https — хосты создадутся без SSL, сертификат можно добавить вручную в NPM (:81).
 

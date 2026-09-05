@@ -72,15 +72,25 @@ if [ "$EXTERNAL_SCHEME" = "https" ]; then
     echo "error: для https нужны DNS_PROVIDER_CREDENTIALS (или задай env-переменную)" >&2
     exit 1
   fi
+  # Для выпуска сертификата LE нужен валидный email (NPM использует email админа)
+  if [ -z "${NPM_EMAIL:-}" ]; then
+    if [ -t 0 ]; then
+      read -r -p "Email для Let's Encrypt (валидный, для ACME): " NPM_EMAIL || true
+    fi
+    if [ -z "$NPM_EMAIL" ]; then
+      echo "error: для https нужен валидный email для Let's Encrypt (NPM_EMAIL)" >&2
+      exit 1
+    fi
+  fi
   echo
   echo "  Wildcard-сертификат *.${BASE_DOMAIN} будет выпущен автоматически через"
-  echo "  Let's Encrypt (DNS challenge) после старта NPM."
+  echo "  Let's Encrypt (DNS challenge) после старта NPM (email: ${NPM_EMAIL})."
   echo
 fi
 
 # --- Генерируем .env, если его нет ---
 if [ ! -f .env ]; then
-  NPM_EMAIL="admin-$(tr -dc 'a-z0-9' </dev/urandom | head -c 12 || true)@ctf.local"
+  NPM_EMAIL="${NPM_EMAIL:-admin-$(tr -dc 'a-z0-9' </dev/urandom | head -c 12 || true)@ctf.local}"
   NPM_PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24 || true)"
   CTF_ADMIN_EMAIL="ctf-$(tr -dc 'a-z0-9' </dev/urandom | head -c 12 || true)@ctf.local"
   CTF_ADMIN_PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24 || true)"
